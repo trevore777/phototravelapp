@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Trip {
+  id           String        @id @default(cuid())
+  title        String
+  destination  String?
+  startDate    DateTime?
+  endDate      DateTime?
+  coverPhotoId String?
+  photos       Photo[]
+  stops        Stop[]
+  books        BookProject[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Photo {
+  id               String    @id @default(cuid())
+  tripId           String
+  trip             Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  stopId           String?
+  stop             Stop?     @relation(fields: [stopId], references: [id], onDelete: SetNull)
+
+  originalFilename String
+  storageKey       String
+  thumbnailKey     String?
+
+  takenAt          DateTime?
+  latitude         Float?
+  longitude        Float?
+  altitude         Float?
+
+  width            Int?
+  height           Int?
+  orientation      Int?
+  deviceModel      String?
+
+  caption          String?
+  note             String?
+  isFavourite      Boolean   @default(false)
+  includeInBook    Boolean   @default(true)
+  sortOrder        Int?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Stop {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  name        String?
+  description String?
+  latitude    Float?
+  longitude   Float?
+  startTime   DateTime?
+  endTime     DateTime?
+  orderIndex  Int?
+
+  photos      Photo[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model BookProject {
+  id           String      @id @default(cuid())
+  tripId       String
+  trip         Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  title         String
+  bookType      String
+  pageCount     Int
+  coverTitle    String?
+  coverSubtitle String?
+  exportStatus  String      @default("draft")
+  exportKey     String?
+
+  pages         BookPage[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model BookPage {
+  id            String      @id @default(cuid())
+  bookProjectId String
+  bookProject   BookProject @relation(fields: [bookProjectId], references: [id], onDelete: Cascade)
+
+  pageNumber    Int
+  layoutType    String
+  pageJson      Json
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
