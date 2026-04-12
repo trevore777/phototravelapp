@@ -1,75 +1,55 @@
-# Photo Travel App
+# Photo Travel App — Simple Version
 
-Local-first starter scaffold for a travel photo app that:
+This is the simplified version of the app.
 
-- imports trip photos
-- reads EXIF metadata
-- extracts timestamps and GPS
-- builds a travel route
-- stores notes and captions
-- generates a simple photobook PDF
-- accepts HEIC / HEIF uploads with safe fallback
-- includes Google Photos import scaffolding
+It does only these core things:
 
-## Stack
+- create a trip
+- upload photos directly from iPhone or laptop
+- read EXIF metadata where available
+- extract timestamps and GPS where available
+- build a travel route on a map
+- add notes and captions to each photo
+- create a simple photobook record
+- export a simple PDF photobook
 
-- Next.js App Router
-- TypeScript
-- Prisma
-- SQLite (local first)
-- EXIF: exifr
-- Images: sharp
-- PDF export: pdf-lib
-- Map: Leaflet / React Leaflet
+## Supported uploads
 
-## 1. Install
+This version is designed for direct file uploads only.
+
+Typical supported formats:
+- JPG / JPEG
+- PNG
+- WEBP
+- HEIC / HEIF (accepted, but preview generation depends on local image codec support)
+
+If a HEIC/HEIF preview cannot be created in your environment:
+- the upload still succeeds
+- the original photo is still saved
+- the app still works
+
+## Local setup
 
 ```bash
 npm install
-```
-
-## 2. Configure env
-
-Copy `.env.example` to `.env`
-
-```bash
 cp .env.example .env
-```
-
-## 3. Create database
-
-```bash
 npx prisma migrate dev --name init
-```
-
-## 4. Run dev server
-
-```bash
 npm run dev
 ```
 
-Open:
+Then open:
 
 ```txt
 http://localhost:3000
 ```
 
-## Notes
-
-- Uploads are stored locally in `tmp_uploads/`.
-- HEIC/HEIF files are accepted. If `sharp` cannot render a thumbnail in your environment, the upload still succeeds and the original file is kept.
-- Google Photos support in this scaffold is a placeholder flow plus API route stubs. You still need to add real Google OAuth credentials and Picker integration.
-- This is ideal for local testing.
-- Later, swap local storage to Supabase Storage or S3.
-
 ## Main routes
 
-- `/` Home
+- `/`
 - `/dashboard`
 - `/trips/[tripId]`
 - `/trips/[tripId]/map`
 - `/trips/[tripId]/book`
-- `/google-photos-import`
 
 ## API routes
 
@@ -78,12 +58,9 @@ http://localhost:3000
 - `PATCH /api/photos/[photoId]`
 - `POST /api/books`
 - `GET /api/export/[bookId]`
-- `POST /api/google-photos/import`
 
-## Next recommended upgrade
+## Notes
 
-- Replace local file storage with Supabase Storage
-- Add authentication
-- Add real Google OAuth + Picker flow
-- Add real image rendering to the PDF pages
-- Add page layout editor
+- uploads are stored locally in `tmp_uploads/`
+- database is local SQLite
+- this version is best for local testing first

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Photo Travel App",
-  description: "Travel route builder and photobook export app"
+  description: "Simple travel route builder and photobook export app"
 };
 
 export default function RootLayout({
@@ -22,7 +22,6 @@ export default function RootLayout({
             </Link>
             <nav className="flex items-center gap-4 text-sm">
               <Link href="/dashboard">Dashboard</Link>
-              <Link href="/google-photos-import">Google Photos</Link>
             </nav>
           </div>
         </header>

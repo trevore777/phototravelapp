@@ -25,6 +25,7 @@ export default function UploadPhotosForm({ tripId }: { tripId: string }) {
     });
 
     setIsUploading(true);
+
     const res = await fetch("/api/uploads", {
       method: "POST",
       body: formData
@@ -39,7 +40,7 @@ export default function UploadPhotosForm({ tripId }: { tripId: string }) {
     }
 
     setStatus(
-      `Uploaded ${data.uploaded} photos. GPS tagged: ${data.gpsTagged}. Missing GPS: ${data.missingGps}. Thumbnail failures: ${data.thumbnailFailures}. Skipped: ${(data.skippedFiles || []).join(", ") || "None"}.`
+      `Uploaded ${data.uploaded} photos. GPS tagged: ${data.gpsTagged}. Missing GPS: ${data.missingGps}.`
     );
     router.refresh();
   }
@@ -48,7 +49,7 @@ export default function UploadPhotosForm({ tripId }: { tripId: string }) {
     <form onSubmit={handleSubmit} className="rounded-2xl border p-4">
       <h2 className="text-lg font-semibold">Upload trip photos</h2>
       <p className="mt-1 text-sm text-gray-600">
-        This local-first version stores uploaded files in <code>tmp_uploads/</code>. Accepted formats: JPG, PNG, WEBP, HEIC, HEIF.
+        Upload directly from your iPhone or laptop. Common formats supported: JPG, JPEG, PNG, WEBP, HEIC, HEIF.
       </p>
 
       <input

@@ -55,9 +55,6 @@ export default async function TripPage({
 
       <section className="mt-8">
         <UploadPhotosForm tripId={trip.id} />
-        <p className="mt-3 text-sm text-gray-600">
-          You can also use the Google Photos import scaffold page and paste this trip ID there.
-        </p>
       </section>
 
       <section className="mt-8">

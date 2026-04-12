@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { parsePhotoMeta } from "@/lib/exif";
+import sharp from "sharp";
 import path from "path";
-import { persistPhotoRecord, savePhotoToLocal } from "@/lib/uploads";
+import fs from "fs/promises";
 
 export const runtime = "nodejs";
 
@@ -31,10 +33,10 @@ export async function POST(req: NextRequest) {
   }
 
   const uploadDir = path.join(process.cwd(), "tmp_uploads");
+  await fs.mkdir(uploadDir, { recursive: true });
+
   let gpsTagged = 0;
   let missingGps = 0;
-  let thumbnailFailures = 0;
-  const skippedFiles: string[] = [];
 
   const existingCount = await db.photo.count({ where: { tripId } });
 
@@ -43,44 +45,61 @@ export async function POST(req: NextRequest) {
     const extension = getExtension(file.name);
 
     if (!ACCEPTED_EXTENSIONS.includes(extension)) {
-      skippedFiles.push(file.name);
-      continue;
+      return NextResponse.json(
+        { error: `Unsupported file type: ${file.name}` },
+        { status: 400 }
+      );
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+    const filename = `${Date.now()}-${i}-${safeName}`;
+    const originalPath = path.join(uploadDir, filename);
+    const thumbPath = path.join(uploadDir, `thumb-${filename}.jpg`);
 
-    const saved = await savePhotoToLocal({
-      bytes,
-      originalFilename: file.name,
-      uploadDir,
-      indexHint: String(existingCount + i)
-    });
+    await fs.writeFile(originalPath, bytes);
 
-    if (saved.meta.latitude != null && saved.meta.longitude != null) {
+    let createdThumb: string | null = null;
+    try {
+      await sharp(bytes)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .jpeg({ quality: 82 })
+        .toFile(thumbPath);
+      createdThumb = thumbPath;
+    } catch {
+      createdThumb = null;
+    }
+
+    const meta = await parsePhotoMeta(bytes);
+
+    if (meta.latitude != null && meta.longitude != null) {
       gpsTagged++;
     } else {
       missingGps++;
     }
 
-    if (saved.thumbnailStatus === "skipped") {
-      thumbnailFailures++;
-    }
-
-    await persistPhotoRecord({
-      tripId,
-      originalFilename: file.name,
-      storageKey: saved.originalPath,
-      thumbnailKey: saved.thumbPath,
-      meta: saved.meta,
-      sortOrder: existingCount + i
+    await db.photo.create({
+      data: {
+        tripId,
+        originalFilename: file.name,
+        storageKey: originalPath,
+        thumbnailKey: createdThumb,
+        takenAt: meta.takenAt ?? null,
+        latitude: meta.latitude ?? null,
+        longitude: meta.longitude ?? null,
+        altitude: meta.altitude ?? null,
+        width: meta.width ?? null,
+        height: meta.height ?? null,
+        orientation: meta.orientation ?? null,
+        deviceModel: meta.deviceModel ?? null,
+        sortOrder: existingCount + i
+      }
     });
   }
 
   return NextResponse.json({
-    uploaded: files.length - skippedFiles.length,
+    uploaded: files.length,
     gpsTagged,
-    missingGps,
-    thumbnailFailures,
-    skippedFiles
+    missingGps
   });
 }
