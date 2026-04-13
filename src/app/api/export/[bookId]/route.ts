@@ -54,11 +54,18 @@ export async function GET(
     bookType: book.bookType === "KMART_4X6" ? "KMART_4X6" : "KMART_6X8"
   });
 
-  return new NextResponse(pdfBytes, {
+  const arrayBuffer = pdfBytes.buffer.slice(
+    pdfBytes.byteOffset,
+    pdfBytes.byteOffset + pdfBytes.byteLength
+  ) as ArrayBuffer;
+
+  return new Response(arrayBuffer, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${book.title}.pdf"`
+      "Content-Disposition": `attachment; filename="${book.title}.pdf"`,
+      "Content-Length": String(pdfBytes.byteLength),
+      "Cache-Control": "no-store"
     }
   });
 }
