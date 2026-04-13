@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { buildSimpleBookPdf } from "@/lib/export-pdf";
+import { buildKmartExportZip } from "@/lib/export-kmart";
 
 export async function GET(
   _req: Request,
@@ -47,18 +47,18 @@ export async function GET(
       };
     });
 
-  const pdfBytes = await buildSimpleBookPdf({
+  const zipBytes = await buildKmartExportZip({
     title: book.coverTitle || book.title,
     subtitle: book.coverSubtitle,
     photos,
     bookType: book.bookType === "KMART_4X6" ? "KMART_4X6" : "KMART_6X8"
   });
 
-  return new NextResponse(pdfBytes, {
+  return new NextResponse(zipBytes, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${book.title}.pdf"`
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${book.title}-kmart-export.zip"`
     }
   });
 }

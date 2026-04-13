@@ -11,22 +11,45 @@ export type ParsedPhotoMeta = {
   deviceModel?: string;
 };
 
-export async function parsePhotoMeta(fileBuffer: Buffer): Promise<ParsedPhotoMeta> {
-  const data = await exifr.parse(fileBuffer, {
-    gps: true,
-    tiff: true,
-    exif: true,
-    ifd0: true
-  });
+function normalizeOrientation(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return value;
+  }
 
-  return {
-    takenAt: data?.DateTimeOriginal ?? data?.CreateDate ?? undefined,
-    latitude: data?.latitude ?? undefined,
-    longitude: data?.longitude ?? undefined,
-    altitude: data?.GPSAltitude ?? undefined,
-    width: data?.ExifImageWidth ?? data?.ImageWidth ?? undefined,
-    height: data?.ExifImageHeight ?? data?.ImageHeight ?? undefined,
-    orientation: data?.Orientation ?? undefined,
-    deviceModel: data?.Model ?? undefined
-  };
+  if (typeof value === "string") {
+    const map: Record<string, number> = {
+      "Horizontal (normal)": 1,
+      "Mirror horizontal": 2,
+      "Rotate 180": 3,
+      "Mirror vertical": 4,
+      "Mirror horizontal and rotate 270 CW": 5,
+      "Rotate 90 CW": 6,
+      "Mirror horizontal and rotate 90 CW": 7,
+      "Rotate 270 CW": 8
+    };
+
+    return map[value] ?? undefined;
+  }
+
+  return undefined;
+}
+
+export async function parsePhotoMeta(fileBuffer: Buffer): Promise<ParsedPhotoMeta> {
+  try {
+    const data: any = await exifr.parse(fileBuffer);
+
+    return {
+      takenAt: data?.DateTimeOriginal || data?.CreateDate,
+      latitude: data?.latitude,
+      longitude: data?.longitude,
+      altitude: data?.GPSAltitude,
+      width: data?.ExifImageWidth || data?.ImageWidth,
+      height: data?.ExifImageHeight || data?.ImageHeight,
+      orientation: normalizeOrientation(data?.Orientation),
+      deviceModel: data?.Model
+    };
+  } catch (err) {
+    console.error("EXIF parse failed:", err);
+    return {};
+  }
 }

@@ -73,6 +73,20 @@ export default async function TripPage({
             {trip.photos.map((photo) => (
               <div key={photo.id} className="rounded-2xl border p-4">
                 <div className="mb-4">
+                  <div className="mb-4 overflow-hidden rounded-xl border bg-gray-100">
+                    {photo.thumbnailKey ? (
+                      <img
+                        src={`/api/photos/${photo.id}/image?kind=thumb`}
+                        alt={photo.originalFilename}
+                        className="h-64 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-64 items-center justify-center text-sm text-gray-500">
+                        Preview not available for this file type
+                      </div>
+                    )}
+                  </div>
+
                   <p className="font-medium">{photo.originalFilename}</p>
                   <p className="text-sm text-gray-500">
                     {photo.takenAt ? new Date(photo.takenAt).toLocaleString() : "No timestamp"}

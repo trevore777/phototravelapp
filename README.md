@@ -1,8 +1,8 @@
-# Photo Travel App — Simple Version
+# Photo Travel App — Simple Version (Preview Fixed)
 
-This is the simplified version of the app.
+This version keeps the app simple and fixes image preview issues.
 
-It does only these core things:
+It does these core things:
 
 - create a trip
 - upload photos directly from iPhone or laptop
@@ -12,21 +12,21 @@ It does only these core things:
 - add notes and captions to each photo
 - create a simple photobook record
 - export a simple PDF photobook
+- show image previews through a local image route
 
 ## Supported uploads
-
-This version is designed for direct file uploads only.
 
 Typical supported formats:
 - JPG / JPEG
 - PNG
 - WEBP
-- HEIC / HEIF (accepted, but preview generation depends on local image codec support)
+- HEIC / HEIF
 
-If a HEIC/HEIF preview cannot be created in your environment:
-- the upload still succeeds
-- the original photo is still saved
-- the app still works
+Important:
+- JPG / PNG / WEBP generate normal previews
+- HEIC / HEIF still upload and save correctly
+- HEIC / HEIF preview generation may be skipped if your local environment cannot render them cleanly
+- if preview generation is skipped, the app still works and shows a placeholder instead of a black image
 
 ## Local setup
 
@@ -42,25 +42,3 @@ Then open:
 ```txt
 http://localhost:3000
 ```
-
-## Main routes
-
-- `/`
-- `/dashboard`
-- `/trips/[tripId]`
-- `/trips/[tripId]/map`
-- `/trips/[tripId]/book`
-
-## API routes
-
-- `GET/POST /api/trips`
-- `POST /api/uploads`
-- `PATCH /api/photos/[photoId]`
-- `POST /api/books`
-- `GET /api/export/[bookId]`
-
-## Notes
-
-- uploads are stored locally in `tmp_uploads/`
-- database is local SQLite
-- this version is best for local testing first

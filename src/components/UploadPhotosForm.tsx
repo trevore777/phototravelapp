@@ -25,24 +25,41 @@ export default function UploadPhotosForm({ tripId }: { tripId: string }) {
     });
 
     setIsUploading(true);
+    setStatus("Uploading...");
 
-    const res = await fetch("/api/uploads", {
-      method: "POST",
-      body: formData
-    });
+    try {
+      const res = await fetch("/api/uploads", {
+        method: "POST",
+        body: formData
+      });
 
-    const data = await res.json();
-    setIsUploading(false);
+      const contentType = res.headers.get("content-type") || "";
+      let data: any = null;
 
-    if (!res.ok) {
-      setStatus(data?.error || "Upload failed.");
-      return;
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Upload route returned non-JSON response. ${text.slice(0, 300)}`);
+      }
+
+      if (!res.ok) {
+        setStatus(data?.error || "Upload failed.");
+        return;
+      }
+
+      setStatus(
+        `Uploaded ${data.uploaded} photos. GPS tagged: ${data.gpsTagged}. Missing GPS: ${data.missingGps}. Thumbnail failures: ${data.thumbnailFailures}.`
+      );
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Upload failed unexpectedly.";
+      setStatus(message);
+      console.error("Upload error:", error);
+    } finally {
+      setIsUploading(false);
     }
-
-    setStatus(
-      `Uploaded ${data.uploaded} photos. GPS tagged: ${data.gpsTagged}. Missing GPS: ${data.missingGps}.`
-    );
-    router.refresh();
   }
 
   return (
