@@ -54,11 +54,18 @@ export async function GET(
     bookType: book.bookType === "KMART_4X6" ? "KMART_4X6" : "KMART_6X8"
   });
 
-  return new NextResponse(zipBytes, {
+  const arrayBuffer = zipBytes.buffer.slice(
+    zipBytes.byteOffset,
+    zipBytes.byteOffset + zipBytes.byteLength
+  ) as ArrayBuffer;
+
+  return new Response(arrayBuffer, {
     status: 200,
     headers: {
       "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${book.title}-kmart-export.zip"`
+      "Content-Disposition": `attachment; filename="${book.title}-kmart-export.zip"`,
+      "Content-Length": String(zipBytes.byteLength),
+      "Cache-Control": "no-store"
     }
   });
 }
