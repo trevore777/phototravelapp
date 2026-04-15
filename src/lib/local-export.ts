@@ -56,6 +56,13 @@ function buildCaption(photo: LocalExportPhoto): string {
   return parts.join(" • ") || "No caption";
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength
+  ) as ArrayBuffer;
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -315,7 +322,8 @@ export async function downloadLocalBookPdf(input: LocalExportBookInput, filename
   }
 
   const pdfBytes = await pdf.save();
-  downloadBlob(new Blob([pdfBytes], { type: "application/pdf" }), filename);
+  const pdfArrayBuffer = toArrayBuffer(pdfBytes);
+  downloadBlob(new Blob([pdfArrayBuffer], { type: "application/pdf" }), filename);
 }
 
 export async function downloadLocalKmartExport(input: LocalExportBookInput, filename: string) {
@@ -349,5 +357,6 @@ export async function downloadLocalKmartExport(input: LocalExportBookInput, file
   );
 
   const bytes = await zip.generateAsync({ type: "uint8array" });
-  downloadBlob(new Blob([bytes], { type: "application/zip" }), filename);
+  const zipArrayBuffer = toArrayBuffer(bytes);
+  downloadBlob(new Blob([zipArrayBuffer], { type: "application/zip" }), filename);
 }

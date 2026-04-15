@@ -168,8 +168,8 @@ export default function TripPage({
   useEffect(() => {
     params.then(async ({ tripId }) => {
       setTripId(tripId);
-      const tripData = await getTrip(tripId);
-      setTrip(tripData || null);
+      const tripData = (await getTrip(tripId)) ?? null;
+      setTrip(tripData);
       setPhotos(await listPhotosForTrip(tripId));
       setBooks(await listBooksForTrip(tripId));
       if (tripData?.title) {
@@ -179,7 +179,7 @@ export default function TripPage({
   }, [params]);
 
   async function refreshAll(activeTripId: string) {
-    setTrip(await getTrip(activeTripId));
+    setTrip((await getTrip(activeTripId)) ?? null);
     setPhotos(await listPhotosForTrip(activeTripId));
     setBooks(await listBooksForTrip(activeTripId));
   }
@@ -332,6 +332,7 @@ export default function TripPage({
           </select>
 
           <button
+            type="button"
             onClick={handleCreateBook}
             className="mt-4 inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
           >
