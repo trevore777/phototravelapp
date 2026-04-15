@@ -8,7 +8,6 @@ export default function LocalBookExportButtons({
   tripId,
   tripTitle,
   destination,
-  bookId,
   bookTitle,
   bookType
 }: {
@@ -31,7 +30,8 @@ export default function LocalBookExportButtons({
         dataUrl: photo.dataUrl,
         takenAt: photo.takenAt ?? null,
         latitude: photo.latitude ?? null,
-        longitude: photo.longitude ?? null
+        longitude: photo.longitude ?? null,
+        orientation: photo.orientation ?? null
       }));
   }
 

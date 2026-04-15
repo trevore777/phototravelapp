@@ -9,6 +9,7 @@ export type LocalExportPhoto = {
   takenAt?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  orientation?: number | null;
 };
 
 export type LocalExportBookInput = {
@@ -74,6 +75,111 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+function loadImage(dataUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+async function normalizeImageDataUrl(
+  dataUrl: string,
+  orientation?: number | null,
+  mimeType: "image/jpeg" | "image/png" = "image/jpeg",
+  quality = 0.92
+): Promise<string> {
+  const img = await loadImage(dataUrl);
+
+  const swapSides = [5, 6, 7, 8].includes(orientation ?? 1);
+  const width = img.naturalWidth;
+  const height = img.naturalHeight;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = swapSides ? height : width;
+  canvas.height = swapSides ? width : height;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+
+  switch (orientation) {
+    case 2:
+      ctx.translate(width, 0);
+      ctx.scale(-1, 1);
+      break;
+    case 3:
+      ctx.translate(width, height);
+      ctx.rotate(Math.PI);
+      break;
+    case 4:
+      ctx.translate(0, height);
+      ctx.scale(1, -1);
+      break;
+    case 5:
+      ctx.rotate(0.5 * Math.PI);
+      ctx.scale(1, -1);
+      break;
+    case 6:
+      ctx.rotate(0.5 * Math.PI);
+      ctx.translate(0, -height);
+      break;
+    case 7:
+      ctx.rotate(0.5 * Math.PI);
+      ctx.translate(width, -height);
+      ctx.scale(-1, 1);
+      break;
+    case 8:
+      ctx.rotate(-0.5 * Math.PI);
+      ctx.translate(-width, 0);
+      break;
+    default:
+      break;
+  }
+
+  ctx.drawImage(img, 0, 0);
+
+  try {
+    return canvas.toDataURL(mimeType, quality);
+  } catch {
+    return dataUrl;
+  }
+}
+
+async function buildNormalizedPhoto(photo: LocalExportPhoto): Promise<LocalExportPhoto> {
+  if (!photo.dataUrl) return photo;
+
+  try {
+    const normalizedDataUrl = await normalizeImageDataUrl(
+      photo.dataUrl,
+      photo.orientation ?? 1,
+      "image/jpeg",
+      0.92
+    );
+
+    return {
+      ...photo,
+      dataUrl: normalizedDataUrl,
+      orientation: 1
+    };
+  } catch {
+    return photo;
+  }
+}
+
+async function normalizePhotos(photos: LocalExportPhoto[]): Promise<LocalExportPhoto[]> {
+  return Promise.all(photos.map(buildNormalizedPhoto));
+}
+
 async function embedDataUrlImage(pdf: PDFDocument, dataUrl: string) {
   const res = await fetch(dataUrl);
   const bytes = await res.arrayBuffer();
@@ -83,15 +189,6 @@ async function embedDataUrlImage(pdf: PDFDocument, dataUrl: string) {
   }
 
   return pdf.embedJpg(bytes);
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
 }
 
 async function buildCoverSvg(input: LocalExportBookInput, width: number, height: number) {
@@ -176,6 +273,8 @@ async function buildSinglePageSvg(photo: LocalExportPhoto, width: number, height
 }
 
 export async function downloadLocalBookPdf(input: LocalExportBookInput, filename: string) {
+  const normalizedPhotos = await normalizePhotos(input.photos);
+
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -209,7 +308,7 @@ export async function downloadLocalBookPdf(input: LocalExportBookInput, filename
     });
   }
 
-  if (input.photos.length > 0) {
+  if (normalizedPhotos.length > 0) {
     const collagePage = pdf.addPage([pageWidth, pageHeight]);
     collagePage.drawText("Highlights", {
       x: 32,
@@ -231,8 +330,8 @@ export async function downloadLocalBookPdf(input: LocalExportBookInput, filename
       { x: margin + frameWidth + gap, y: top - frameHeight * 2 - gap, w: frameWidth, h: frameHeight }
     ];
 
-    for (let i = 0; i < Math.min(4, input.photos.length); i++) {
-      const photo = input.photos[i];
+    for (let i = 0; i < Math.min(4, normalizedPhotos.length); i++) {
+      const photo = normalizedPhotos[i];
       const frame = frames[i];
 
       collagePage.drawRectangle({
@@ -265,8 +364,8 @@ export async function downloadLocalBookPdf(input: LocalExportBookInput, filename
     }
   }
 
-  for (let index = 0; index < input.photos.length; index++) {
-    const photo = input.photos[index];
+  for (let index = 0; index < normalizedPhotos.length; index++) {
+    const photo = normalizedPhotos[index];
     const page = pdf.addPage([pageWidth, pageHeight]);
 
     page.drawText(`Photo ${index + 1}`, {
@@ -327,20 +426,22 @@ export async function downloadLocalBookPdf(input: LocalExportBookInput, filename
 }
 
 export async function downloadLocalKmartExport(input: LocalExportBookInput, filename: string) {
+  const normalizedPhotos = await normalizePhotos(input.photos);
+
   const zip = new JSZip();
   const [width, height] = pageSizeForBook(input.bookType);
 
   zip.file("page-01-cover.svg", await buildCoverSvg(input, width, height));
 
-  if (input.photos.length > 0) {
-    zip.file("page-02-highlights.svg", await buildCollageSvg(input.photos, width, height));
+  if (normalizedPhotos.length > 0) {
+    zip.file("page-02-highlights.svg", await buildCollageSvg(normalizedPhotos, width, height));
   }
 
-  for (let i = 0; i < input.photos.length; i++) {
+  for (let i = 0; i < normalizedPhotos.length; i++) {
     const pageNumber = String(i + 3).padStart(2, "0");
     zip.file(
       `page-${pageNumber}.svg`,
-      await buildSinglePageSvg(input.photos[i], width, height, i)
+      await buildSinglePageSvg(normalizedPhotos[i], width, height, i)
     );
   }
 
@@ -350,7 +451,7 @@ export async function downloadLocalKmartExport(input: LocalExportBookInput, file
       "Kmart Export Pack",
       "",
       "This ZIP contains page layout SVG files exported from your photobook.",
-      "You can use them as layout references or convert them to JPG/PNG later if needed.",
+      "Images were normalized client-side to correct orientation.",
       "",
       "Book type: " + (input.bookType ?? "KMART_6X8")
     ].join("\n")
