@@ -1,64 +1,79 @@
-import { db } from "@/lib/db";
-import { notFound } from "next/navigation";
-import Link from "next/link";
+"use client";
 
-export default async function TripBookPage({
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { getTrip, listBooksForTrip } from "@/lib/local-storage";
+import LocalBookExportButtons from "@/components/LocalBookExportButtons";
+
+type Trip = {
+  id: string;
+  title: string;
+  destination?: string;
+};
+
+type Book = {
+  id: string;
+  title: string;
+  bookType: "KMART_4X6" | "KMART_6X8";
+  createdAt: string;
+};
+
+export default function TripBookPage({
   params
 }: {
   params: Promise<{ tripId: string }>;
 }) {
-  const { tripId } = await params;
+  const [tripId, setTripId] = useState("");
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [books, setBooks] = useState<Book[]>([]);
 
-  const trip = await db.trip.findUnique({
-    where: { id: tripId },
-    include: {
-      books: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          pages: { orderBy: { pageNumber: "asc" } }
-        }
-      }
-    }
-  });
+  useEffect(() => {
+    params.then(async ({ tripId }) => {
+      setTripId(tripId);
+      setTrip((await getTrip(tripId)) || null);
+      setBooks(await listBooksForTrip(tripId));
+    });
+  }, [params]);
 
-  if (!trip) return notFound();
+  if (!trip) {
+    return (
+      <main className="mx-auto max-w-6xl p-6">
+        <p>Loading book page...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl p-6">
       <h1 className="text-3xl font-bold">Book builder</h1>
       <p className="mt-2 text-gray-600">
-        This starter scaffold creates a simple draft book structure and PDF export.
+        Create and download your trip book locally from this device.
       </p>
 
       <div className="mt-6 space-y-4">
-        {trip.books.length === 0 ? (
+        {books.length === 0 ? (
           <div className="rounded-2xl border p-4 text-sm text-gray-600">
             No books created yet. Go back to the trip page and create one.
           </div>
         ) : (
-          trip.books.map((book) => (
+          books.map((book) => (
             <div key={book.id} className="rounded-2xl border p-4">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold">{book.title}</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    {book.bookType} · {book.pageCount} pages
+                    {book.bookType}
                   </p>
                 </div>
-                <a
-                  href={`/api/export/${book.id}`}
-                  className="rounded-xl border px-4 py-2 text-sm"
-                >
-                  Download PDF
-                </a>
-              </div>
 
-              <div className="mt-4 space-y-2">
-                {book.pages.map((page) => (
-                  <div key={page.id} className="rounded-xl bg-gray-50 p-3 text-sm">
-                    Page {page.pageNumber} · {page.layoutType}
-                  </div>
-                ))}
+                <LocalBookExportButtons
+                  tripId={tripId}
+                  tripTitle={trip.title}
+                  destination={trip.destination}
+                  bookId={book.id}
+                  bookTitle={book.title}
+                  bookType={book.bookType}
+                />
               </div>
             </div>
           ))
